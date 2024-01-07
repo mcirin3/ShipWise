@@ -1,0 +1,723 @@
+import javafx.application.Application;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
+
+import java.io.*;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+@SuppressWarnings("ALL")
+public class Main extends Application {
+    private Stage primaryStage;
+    private Button backButton;
+
+    private int orderNumber;
+    private int itemRecordNum;
+
+    //For generating Tracking ID Numbers
+private Set<String> generatedStrings = new HashSet<>();
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage primaryStage) {
+        this.primaryStage = primaryStage;
+        showLoginWindow();
+    }
+
+   /***Start of Login Content***/
+    private void showLoginWindow() {
+        primaryStage.setTitle("Login");
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+
+        TextField usernameField = new TextField();
+        PasswordField passwordField = new PasswordField();
+        Button loginButton = new Button("Login");
+        Hyperlink createAccountLink = new Hyperlink("Create Account");
+
+        loginButton.setOnAction(e -> handleLogin(usernameField.getText(), passwordField.getText()));
+        createAccountLink.setOnAction(e -> showCreateAccountWindow());
+
+        vbox.getChildren().addAll(
+                new Label("Username:"),
+                usernameField,
+                new Label("Password:"),
+                passwordField,
+                loginButton,
+                createAccountLink
+        );
+
+        Scene scene = new Scene(vbox, 500, 500);
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
+
+    private void handleLogin(String username, String password) {
+        // Implement login logic
+        if (validateLogin(username, password)) {
+            // After successful login, you can open the main menu or another window
+            showMainMenuWindow(username);
+        } else {
+            showCautionAlert("Login Failed", "Invalid username or password. Please try again.");
+        }
+    }
+
+    private boolean validateLogin(String username, String password) {
+        try (InputStream inputStream = getClass().getResourceAsStream("/authority.txt");
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length == 2 && parts[0].equals(username) && parts[1].equals(password)) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    /*End of Login Content*/
+
+
+    /***Start of Main Menu Content***/
+    private void showMainMenuWindow(String loggedInUser) {
+        primaryStage.setTitle("Main Menu");
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+        vbox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+
+        Label welcomeLabel = new Label("Welcome to the Logistics App!");
+        welcomeLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        welcomeLabel.setTextFill(Color.WHITE);
+
+        Label loggedInLabel = new Label("Logged in as: " + loggedInUser);
+        loggedInLabel.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        loggedInLabel.setTextFill(Color.WHITE);
+
+        Button orderTrackingButton = new Button("Order Tracking");
+        Button itemTrackingButton = new Button("Item Tracking");
+        Button activityLogButton = new Button("Activity Log");
+
+        //For generating Tracking ID Numbers
+        Button generateTrackingIDButton = new Button("Generate New Tracking ID");
+        TextField generatedIDTextField = new TextField();
+
+        generateTrackingIDButton.setOnAction(e -> {
+            String generatedString = generateRandomString();
+            generatedIDTextField.setText(generatedString);
+
+        });
+
+        orderTrackingButton.setOnAction(e -> showOrderTrackMenu(loggedInUser));
+        itemTrackingButton.setOnAction(e -> showItemTrackMenu(loggedInUser));
+        activityLogButton.setOnAction(e -> showActivityLog(loggedInUser));
+
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> showLoginWindow());
+
+        backButton = new Button("Back");
+        backButton.setDisable(true);  // Initially disable the back button
+
+        HBox generateStringBox = new HBox(generateTrackingIDButton, generatedIDTextField);
+        generateStringBox.setAlignment(Pos.CENTER_LEFT);
+        generateStringBox.setSpacing(10);
+        HBox topBar = new HBox(backButton, loggedInLabel, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        vbox.getChildren().addAll(
+                topBar,
+                welcomeLabel,
+                generateStringBox,
+                orderTrackingButton,
+                itemTrackingButton,
+                activityLogButton
+        );
+
+        Scene scene = new Scene(vbox, 500, 500);
+        primaryStage.setScene(scene);
+    }
+    private String generateRandomString() {
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random = new Random();
+        String generatedString;
+
+        do {
+            // Generate a random string of 10 characters
+            generatedString = random.ints(10, 0, characters.length())
+                    .mapToObj(characters::charAt)
+                    .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                    .toString();
+        } while (generatedStrings.contains(generatedString));
+
+        // Store the generated string in the set and file
+        generatedStrings.add(generatedString);
+        storeGeneratedStringToFile(generatedString);
+
+        return generatedString;
+    }
+
+    private void storeGeneratedStringToFile(String generatedString) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("generatedStrings.txt", true))) {
+            writer.write(generatedString);
+            writer.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    /*End of Main Menu Content***/
+
+
+
+    /***Start of Order Tracking Content***/
+    private void showOrderTrackMenu(String loggedInUser) {
+        primaryStage.setTitle("Order Tracking Services");
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+        vbox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+
+        Label orderTrackingLabel = new Label("Order Tracking");
+        orderTrackingLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        orderTrackingLabel.setTextFill(Color.WHITE);
+
+        Button createOrderButton = new Button("Create Order");
+        createOrderButton.setOnAction(e -> showCreateOrder(loggedInUser));
+        Button viewOrderListButton = new Button("View Orders");
+        viewOrderListButton.setOnAction(e -> showViewOrderWindow(loggedInUser));
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> showLoginWindow());
+
+
+        backButton = new Button("Back");
+        backButton.setOnAction(e -> showMainMenuWindow(loggedInUser));
+
+        HBox topBar = new HBox(backButton, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        if (loggedInUser.equals("admin")) {
+            Button modifyOrdersButton = new Button("Modify Orders");
+            vbox.getChildren().addAll(
+                    topBar,
+                    orderTrackingLabel,
+                    createOrderButton,
+                    viewOrderListButton,
+                    modifyOrdersButton
+            );
+
+            Scene scene = new Scene(vbox, 500, 500);
+            primaryStage.setScene(scene);
+        }
+
+        vbox.getChildren().addAll(
+                topBar,
+                orderTrackingLabel,
+                createOrderButton,
+                viewOrderListButton
+        );
+        logActivity("Order tracking opened by: " + loggedInUser);
+        Scene scene = new Scene(vbox, 500, 500);
+        primaryStage.setScene(scene);
+    }
+
+    private void showCreateOrder(String loggedInUser) {
+        primaryStage.setTitle("Create Order");
+
+        VBox createOrderVBox = new VBox();
+        createOrderVBox.setSpacing(10);
+        createOrderVBox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+
+        TextField orderIDTextField = new TextField();
+        TextField orderNameTextField = new TextField();
+        TextField orderDateTextField = new TextField();
+        TextField orderExpectedDateTextField = new TextField();
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> showLoginWindow());
+
+        backButton = new Button("Back");
+        backButton.setOnAction(e -> showOrderTrackMenu(loggedInUser));
+
+        HBox topBar = new HBox(backButton, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        Button createOrderRecordButton = new Button("Create Order Record");
+
+        createOrderRecordButton.setOnAction(e -> {writeToCSV(
+                loggedInUser,
+                orderIDTextField.getText(),
+                orderNameTextField.getText(),
+                orderDateTextField.getText(),
+                orderExpectedDateTextField.getText());
+
+            showAlert("Order Successfully Created", "Your record is logged in!");
+            showOrderTrackMenu(loggedInUser);
+            orderNumber++;
+        });
+
+
+        createOrderVBox.getChildren().addAll(
+                topBar,
+                new Label("Order ID#:"), orderIDTextField,
+                new Label("Order to:"), orderNameTextField,
+                new Label("Date Order Placed:"), orderDateTextField,
+                new Label("Order Date Arrival:"), orderExpectedDateTextField,
+                createOrderRecordButton
+        );
+
+        Scene scene = new Scene(createOrderVBox, 500, 500);
+        primaryStage.setScene(scene);
+
+        logActivity("Order #"+orderIDTextField.getText()+" recorded by "+loggedInUser);
+
+    }
+
+    private void handleCreateOrderButton(String loggedInUser, String orderID, String orderName, String orderDate, String expectedDate){
+        showAlert("Order Created", "The Order has been Successfully Created!");
+        showOrderTrackMenu(loggedInUser);
+        logActivity("Order Record Created by: " + loggedInUser);
+
+        writeToCSV(loggedInUser, orderID, orderName, orderDate, expectedDate);
+
+
+    }
+
+    private void writeToCSV(String loggedInUser, String orderID, String orderName, String orderDate, String expectedDate) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("order_records.csv", true))) {
+            // Use a timestamp along with the activity message
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String csvLine = String.format("%s,%s,%s,%s,%s,%s%n", timestamp, loggedInUser, orderID, orderName, orderDate, expectedDate);
+
+            //Sanity check
+            // Print the components before writing to CSV
+            System.out.println("Writing to CSV with the following components:");
+            System.out.println("Timestamp: " + timestamp);
+            System.out.println("User: " + loggedInUser);
+            System.out.println("Order ID: " + orderID);
+            System.out.println("Order Name: " + orderName);
+            System.out.println("Order Date: " + orderDate);
+            System.out.println("Expected Date: " + expectedDate);
+
+
+            // Write the CSV line to the file
+            writer.write(csvLine);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showViewOrderWindow(String loggedInUser) {
+        primaryStage.setTitle("View Orders");
+
+        // Create a TableView
+        TableView<String[]> tableView = new TableView<>();
+        ObservableList<String[]> data = FXCollections.observableArrayList();
+
+        // Read contents of order_records.csv and populate the TableView
+        try (BufferedReader reader = new BufferedReader(new FileReader("order_records.csv"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                data.add(parts);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Create TableColumn objects
+        String[] columnNames = {"Timestamp", "User", "Order ID", "Order Name", "Order Date", "Expected Date"};
+
+        for (int i = 0; i < columnNames.length; i++) {
+            final int columnIndex = i;
+            TableColumn<String[], String> column = new TableColumn<>(columnNames[i]);
+            column.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue()[columnIndex]));
+            tableView.getColumns().add(column);
+        }
+
+        tableView.setItems(data);
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+        vbox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+        backButton = new Button("Back");
+        backButton.setOnAction(e -> showOrderTrackMenu(loggedInUser));
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> showLoginWindow());
+        HBox topBar = new HBox(backButton, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        vbox.getChildren().addAll(
+                topBar,
+                tableView
+        );
+
+        Scene scene = new Scene(vbox, 800, 600);
+        primaryStage.setScene(scene);
+    }
+
+    /*End of Order Tracking Content***/
+
+
+
+    /***Start of Item Tracking Services***/
+    private void showItemTrackMenu(String loggedInUser) {
+        primaryStage.setTitle("Item Management Services");
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+        vbox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+
+        Label itemTrackingLabel = new Label("Item Tracking");
+        itemTrackingLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        itemTrackingLabel.setTextFill(Color.WHITE);
+
+        Button createItemRecordButton = new Button("Create Item Record");
+        createItemRecordButton.setOnAction(e -> showCreateItemRecord(loggedInUser));
+        Button viewInventoryButton = new Button("View Inventory");
+        viewInventoryButton.setOnAction(e -> viewInventoryRecord(loggedInUser));
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> showLoginWindow());
+
+        backButton = new Button("Back");
+        backButton.setOnAction(e -> showMainMenuWindow(loggedInUser));
+
+        HBox topBar = new HBox(backButton, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        if (loggedInUser.equals("admin")) {
+            Button modifyInventoryButton = new Button("Modify Inventory");
+            vbox.getChildren().addAll(
+                    topBar,
+                    itemTrackingLabel,
+                    createItemRecordButton,
+                    viewInventoryButton,
+                    modifyInventoryButton
+            );
+            logActivity("Item tracking opened by: " + loggedInUser);
+            Scene scene = new Scene(vbox, 400, 300);
+            primaryStage.setScene(scene);
+        }
+
+        vbox.getChildren().addAll(
+                topBar,
+                itemTrackingLabel,
+                createItemRecordButton,
+                viewInventoryButton
+        );
+
+        Scene scene = new Scene(vbox, 400, 300);
+        primaryStage.setScene(scene);
+    }
+
+    private void showCreateItemRecord(String loggedInUser){
+        primaryStage.setTitle("Create Item Record");
+
+        VBox createOrderVBox = new VBox();
+        createOrderVBox.setSpacing(10);
+        createOrderVBox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+
+        TextField itemNameTextField = new TextField();
+        TextField itemQuantityTextField = new TextField();
+        TextField containerIDTextField = new TextField();
+        TextField warehouseLocTextField = new TextField();
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> showLoginWindow());
+
+        backButton = new Button("Back");
+        backButton.setOnAction(e -> showItemTrackMenu(loggedInUser));
+
+        HBox topBar = new HBox(backButton, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        Button createItemRecordButton = new Button("Add Record to Inventory");
+
+        createItemRecordButton.setOnAction(e -> { writeToCSV2(
+                loggedInUser,
+                itemNameTextField.getText(),
+                itemQuantityTextField.getText(),
+                containerIDTextField.getText(),
+                warehouseLocTextField.getText()
+
+        );
+
+
+            showAlert("Inventory Record Created", "Your record is logged in!");
+            showOrderTrackMenu(loggedInUser);
+            orderNumber++;
+        });
+
+
+        createOrderVBox.getChildren().addAll(
+                topBar,
+                new Label("Item Name:"), itemNameTextField,
+                new Label("Item Quantity:"), itemQuantityTextField,
+                new Label("Container ID#:"), containerIDTextField,
+                new Label("Located At Warehouse:"), warehouseLocTextField,
+                createItemRecordButton
+        );
+
+        Scene scene = new Scene(createOrderVBox, 500, 500);
+        primaryStage.setScene(scene);
+
+        logActivity("Item Record #"+itemRecordNum+" recorded by "+loggedInUser);
+
+
+
+
+    }
+
+    private void writeToCSV2(String loggedInUser, String itemName, String itemQuantity, String containerID, String warehouseLocation) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("inventory.csv", true))) {
+            // Use a timestamp along with the activity message
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String csvLine = String.format("%s,%s,%s,%s,%s,%s%n", timestamp, loggedInUser, itemName, itemQuantity, containerID, warehouseLocation);
+
+            //Sanity check
+            // Print the components before writing to CSV
+            System.out.println("Writing to CSV with the following components:");
+            System.out.println("Timestamp: " + timestamp);
+            System.out.println("User: " + loggedInUser);
+            System.out.println("Order ID: " + itemName);
+            System.out.println("Order Name: " + itemQuantity);
+            System.out.println("Order Date: " + containerID);
+            System.out.println("Expected Date: " + warehouseLocation);
+
+
+            // Write the CSV line to the file
+            writer.write(csvLine);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void viewInventoryRecord(String loggedInUser) {
+        primaryStage.setTitle("View Inventory");
+
+        // Create a TableView
+        TableView<String[]> tableView2 = new TableView<>();
+        ObservableList<String[]> data = FXCollections.observableArrayList();
+
+        // Read contents of order_records.csv and populate the TableView
+        try (BufferedReader reader = new BufferedReader(new FileReader("inventory.csv"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                data.add(parts);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Create TableColumn objects
+        String[] columnNames = {"Timestamp", "User", "Item Name", "Item Quantity", "Container ID", "Warehouse Location"};
+
+        for (int i = 0; i < columnNames.length; i++) {
+            final int columnIndex = i;
+            TableColumn<String[], String> column = new TableColumn<>(columnNames[i]);
+            column.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue()[columnIndex]));
+            tableView2.getColumns().add(column);
+        }
+
+        tableView2.setItems(data);
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+        vbox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+        backButton = new Button("Back");
+        backButton.setOnAction(e -> showItemTrackMenu(loggedInUser));
+        Button logoutButton = new Button("Logout");
+        logoutButton.setOnAction(e -> showLoginWindow());
+        HBox topBar = new HBox(backButton, logoutButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        vbox.getChildren().addAll(
+                topBar,
+                tableView2
+        );
+
+        Scene scene = new Scene(vbox, 800, 600);
+        primaryStage.setScene(scene);
+    }
+
+    /*End of Item Tracking Services***/
+
+    private void showCreateAccountWindow() {
+        primaryStage.setTitle("Create Account");
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+
+        TextField newUsernameField = new TextField();
+        PasswordField newPasswordField = new PasswordField();
+        Button createAccountButton = new Button("Create Account");
+
+        createAccountButton.setOnAction(e -> handleCreateAccount(newUsernameField.getText(), newPasswordField.getText()));
+
+        vbox.getChildren().addAll(
+                new Label("New Username:"),
+                newUsernameField,
+                new Label("New Password:"),
+                newPasswordField,
+                createAccountButton
+        );
+
+        Scene scene = new Scene(vbox, 300, 200);
+        primaryStage.setScene(scene);
+    }
+
+    private void handleCreateAccount(String newUsername, String newPassword) {
+        // Implement account creation logic
+        try {
+            // Create a temporary file for writing
+            File tempFile = File.createTempFile("authority_temp", ".txt");
+            tempFile.deleteOnExit();
+
+            // Read the existing content from the resource file
+            InputStream inputStream = getClass().getResourceAsStream("/authority.txt");
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+                 BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile, true))) {
+
+                // Copy existing content to the temporary file
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+
+                // Append the new account information
+                writer.write(newUsername + "," + newPassword);
+
+                showAlert("Account Created", "Account created successfully!");
+                showLoginWindow();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            // Replace the original file with the temporary file
+            File originalFile = new File(Objects.requireNonNull(getClass().getResource("/authority.txt")).toURI());
+            tempFile.renameTo(originalFile);
+
+        } catch (IOException | URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    private void showCautionAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    private void showActivityLog(String loggedInUser) {
+        primaryStage.setTitle("Activity Log");
+
+        VBox vbox = new VBox();
+        vbox.setSpacing(10);
+        vbox.setStyle("-fx-background-color: lightcoral; -fx-padding: 10px;");
+
+        Label activityLogLabel = new Label("Activity Log");
+        activityLogLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        activityLogLabel.setTextFill(Color.WHITE);
+
+        TextArea logTextArea = new TextArea();
+        logTextArea.setEditable(false);
+
+        Button backButton = new Button("Back");
+        backButton.setOnAction(e -> showMainMenuWindow(loggedInUser));
+
+        // Read contents of activity_log.txt and set it to logTextArea
+        try (BufferedReader reader = new BufferedReader(new FileReader("activity_log.txt"))) {
+            StringBuilder logContent = new StringBuilder();
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                logContent.append(line).append("\n");
+            }
+
+            logTextArea.setText(logContent.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        HBox topBar = new HBox(backButton);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setSpacing(10);
+        topBar.setPadding(new Insets(5));
+
+        vbox.getChildren().addAll(
+                topBar,
+                activityLogLabel,
+                logTextArea
+        );
+
+        Scene scene = new Scene(vbox, 400, 300);
+        primaryStage.setScene(scene);
+
+
+
+        // Log initial activity or load previous logs...
+        logActivity("Activity Log opened by: " + loggedInUser);
+    }
+
+    // Method to log activity
+// Updated logActivity method
+    private void logActivity(String activity) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("activity_log.txt", true))) {
+            // Use a timestamp along with the activity message
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            String logMessage = "[" + timestamp + "] " + activity;
+
+            // Log the activity to a file
+            writer.write(logMessage);
+            writer.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+}

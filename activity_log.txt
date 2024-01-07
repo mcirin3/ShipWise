@@ -1,0 +1,36 @@
+[2024-01-01 10:55:28] Activity Log opened by: admin
+[2024-01-01 10:55:30] Item tracking opened by: admin
+[2024-01-01 10:55:46] Item tracking opened by: admin
+[2024-01-01 10:55:49] Activity Log opened by: admin
+[2024-01-01 15:08:15] Activity Log opened by: second
+[2024-01-01 15:11:02] Activity Log opened by: second
+[2024-01-01 15:11:34] Order tracking opened by: second
+[2024-01-01 15:34:39] Item tracking opened by: admin
+[2024-01-01 15:37:40] Activity Log opened by: admin
+[2024-01-01 15:37:57] Activity Log opened by: admin
+[2024-01-01 15:58:35] Item tracking opened by: admin
+[2024-01-01 16:19:51] Item tracking opened by: admin
+[2024-01-01 17:07:00] Item tracking opened by: admin
+[2024-01-01 17:11:54] Activity Log opened by: admin
+[2024-01-01 17:15:20] Item Record #0 recorded by admin
+[2024-01-01 17:16:23] Activity Log opened by: admin
+[2024-01-02 09:52:09] Item tracking opened by: admin
+[2024-01-02 09:52:10] Item Record #0 recorded by admin
+[2024-01-02 09:55:33] Item tracking opened by: admin
+[2024-01-02 09:55:58] Item tracking opened by: admin
+[2024-01-02 09:56:02] Item Record #0 recorded by admin
+[2024-01-02 09:56:04] Item tracking opened by: admin
+[2024-01-04 11:59:38] Order # recorded by admin
+[2024-01-04 12:02:43] Order # recorded by admin
+[2024-01-04 12:08:52] Order # recorded by admin
+[2024-01-04 12:10:59] Order tracking opened by: mcirineo
+[2024-01-04 12:11:04] Order tracking opened by: mcirineo
+[2024-01-04 12:11:06] Order tracking opened by: mcirineo
+[2024-01-04 12:13:02] Item tracking opened by: admin
+[2024-01-04 12:13:06] Item tracking opened by: admin
+[2024-01-04 12:14:28] Item tracking opened by: admin
+[2024-01-04 12:14:31] Item tracking opened by: admin
+[2024-01-04 12:30:15] Activity Log opened by: admin
+[2024-01-04 12:30:24] Item tracking opened by: admin
+[2024-01-04 12:30:33] Item tracking opened by: admin
+[2024-01-04 13:59:24] Order # recorded by admin
